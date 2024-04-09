@@ -1,4 +1,4 @@
-module test_go_proc
+module ProcessMonitor
 
 go 1.22.2
 

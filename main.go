@@ -26,8 +26,10 @@ func convertProcess(inputProcess *process.Process, processAdapter *ProcessAdapte
 	processAdapter.Pid = inputProcess.Pid
 	processAdapter.Name, _ = inputProcess.Name()
 	processAdapter.NumThreads, _ = inputProcess.NumThreads()
-	meminfo, _ := inputProcess.MemoryInfo()
-	processAdapter.RSSMem = meminfo.RSS
+	meminfo, res := inputProcess.MemoryInfo()
+	if res == nil {
+		processAdapter.RSSMem = meminfo.RSS
+	}
 
 	start := time.Now()
 	processAdapter.CPUPercent, _ = inputProcess.CPUPercent()
