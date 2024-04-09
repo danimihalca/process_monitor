@@ -35,6 +35,29 @@ func convertProcess(inputProcess *process.Process, processAdapter *ProcessAdapte
 	log.Printf("Get cpu took %s", elapsed)
 }
 
+func getProcesses() []*ProcessAdapter {
+	start := time.Now()
+	processes, _ := process.Processes()
+	elapsed := time.Since(start)
+	log.Printf("Get processes took %s", elapsed)
+
+	start = time.Now()
+	processAdapters := make([]*ProcessAdapter, len(processes))
+	for i := range len(processes) {
+		processAdapters[i] = new(ProcessAdapter)
+	}
+	for i, p := range processes {
+		start1 := time.Now()
+		convertProcess(p, processAdapters[i])
+		elapsed1 := time.Since(start1)
+		log.Printf("Convert 1 process took %s", elapsed1)
+	}
+	elapsed = time.Since(start)
+	log.Printf("Convert processes took %s", elapsed)
+
+	return processAdapters
+}
+
 func createTable(processes []*ProcessAdapter) *widget.Table {
 	start := time.Now()
 	table := widget.NewTable(
@@ -67,31 +90,19 @@ func createTable(processes []*ProcessAdapter) *widget.Table {
 }
 
 func main() {
-	start := time.Now()
-	processes, _ := process.Processes()
-	elapsed := time.Since(start)
-	log.Printf("Get processes took %s", elapsed)
-
-	start = time.Now()
-	processAdapters := make([]*ProcessAdapter, len(processes))
-	for i := range len(processes) {
-		processAdapters[i] = new(ProcessAdapter)
-	}
-	for i, p := range processes {
-		start1 := time.Now()
-		convertProcess(p, processAdapters[i])
-		elapsed1 := time.Since(start1)
-		log.Printf("Convert 1 process took %s", elapsed1)
-	}
-	elapsed = time.Since(start)
-	log.Printf("Convert processes took %s", elapsed)
 
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Process Monitor")
 
-	table := createTable(processAdapters)
-
-	myWindow.SetContent(table)
 	myWindow.Resize(fyne.NewSize(800, 800))
+
+	go func() {
+		for range time.Tick(time.Second) {
+			processAdapters := getProcesses()
+			table := createTable(processAdapters)
+			myWindow.SetContent(table)
+		}
+	}()
+
 	myWindow.ShowAndRun()
 }
