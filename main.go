@@ -5,8 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/process"
 
 	"fyne.io/fyne/v2"
@@ -37,16 +35,38 @@ func convertProcess(inputProcess *process.Process, processAdapter *ProcessAdapte
 	log.Printf("Get cpu took %s", elapsed)
 }
 
-var data = [][]string{[]string{"top left", "top right"},
-	[]string{"bottom left", "bottom right"}}
+func createTable(processes []*ProcessAdapter) *widget.Table {
+	start := time.Now()
+	table := widget.NewTable(
+		func() (int, int) {
+			return len(processes), 5
+		},
+		func() fyne.CanvasObject {
+			return widget.NewLabel("wide content")
+		},
+		func(i widget.TableCellID, o fyne.CanvasObject) {
+			o.(*widget.Label).SetText(fmt.Sprint(structs.Values(processes[i.Row])[i.Col]))
+		})
+	elapsed := time.Since(start)
+	log.Printf("Create table took %s", elapsed)
+
+	columns := map[int]string{
+		0: "PID",
+		1: "Name",
+		2: "NumThreads",
+		3: "RSSMem",
+		4: "CPU%",
+	}
+
+	table.ShowHeaderRow = true
+	table.UpdateHeader = func(id widget.TableCellID, o fyne.CanvasObject) {
+		o.(*widget.Label).SetText(columns[id.Col])
+	}
+
+	return table
+}
 
 func main() {
-	infoStat, _ := host.Info()
-	fmt.Printf("Total processes: %d\n", infoStat.Procs)
-
-	miscStat, _ := load.Misc()
-	fmt.Printf("Running processes: %d\n", miscStat.ProcsRunning)
-
 	start := time.Now()
 	processes, _ := process.Processes()
 	elapsed := time.Since(start)
@@ -67,22 +87,11 @@ func main() {
 	log.Printf("Convert processes took %s", elapsed)
 
 	myApp := app.New()
-	myWindow := myApp.NewWindow("Table Widget")
+	myWindow := myApp.NewWindow("Process Monitor")
 
-	start = time.Now()
-	list := widget.NewTable(
-		func() (int, int) {
-			return len(processAdapters), 5
-		},
-		func() fyne.CanvasObject {
-			return widget.NewLabel("wide content")
-		},
-		func(i widget.TableCellID, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(fmt.Sprint(structs.Values(processAdapters[i.Row])[i.Col]))
-		})
-	elapsed = time.Since(start)
-	log.Printf("Create table took %s", elapsed)
+	table := createTable(processAdapters)
 
-	myWindow.SetContent(list)
+	myWindow.SetContent(table)
+	myWindow.Resize(fyne.NewSize(800, 800))
 	myWindow.ShowAndRun()
 }
